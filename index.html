@@ -1,0 +1,967 @@
+<title>วิทยุร้าน</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#F8F3E9;
+    --surface:#FFFFFF;
+    --surface-alt:#EFE6D3;
+    --ink:#3B342B;
+    --ink-soft:#9C9182;
+    --line:#EAE0CB;
+    --accent:#C4A268;
+    --accent-ink:#2E2110;
+    --good:#6B9A78;
+    --warn:#C4805F;
+    --radius:14px;
+    --radius-sm:10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1C1811;
+      --surface:#252019;
+      --surface-alt:#2E2820;
+      --ink:#F1E9DA;
+      --ink-soft:#8F8474;
+      --line:#383125;
+      --accent:#D6B77E;
+      --accent-ink:#241B0C;
+      --good:#84BF8F;
+      --warn:#D89476;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1C1811;
+    --surface:#252019;
+    --surface-alt:#2E2820;
+    --ink:#F1E9DA;
+    --ink-soft:#8F8474;
+    --line:#383125;
+    --accent:#D6B77E;
+    --accent-ink:#241B0C;
+    --good:#84BF8F;
+    --warn:#D89476;
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Sora', system-ui, -apple-system, sans-serif;
+    height:100%;
+    overflow:hidden;
+  }
+  html{ height:100%; }
+  .mono{ font-variant-numeric:tabular-nums; }
+  .display{ font-family:'Sora', sans-serif; }
+
+  #app{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    max-width:560px;
+    margin:0 auto;
+    background:var(--bg);
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px 14px;
+    gap:10px;
+    flex-shrink:0;
+  }
+  .shop-block{ display:flex; flex-direction:column; min-width:0; }
+  .shop-name{ font-weight:700; font-size:16px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status-line{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft); margin-top:3px; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink-soft); flex-shrink:0; }
+  .dot.on{ background:var(--good); animation:pulse 2s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  .clock{ font-size:18px; font-weight:500; color:var(--ink-soft); }
+  .header-right{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
+  .icon-btn{
+    width:34px;height:34px;border-radius:50%;border:none;
+    background:none; color:var(--ink-soft); display:flex;align-items:center;justify-content:center;
+    cursor:pointer; flex-shrink:0;
+  }
+  .icon-btn:active{ background:var(--surface-alt); }
+
+  main{ flex:1; min-height:0; overflow-y:auto; padding:8px 20px calc(20px + env(safe-area-inset-bottom,0px)); }
+  main::-webkit-scrollbar{ width:0; }
+
+  /* ---------- now playing ---------- */
+  .now-playing{
+    padding:28px 8px 20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:12px;
+  }
+  .disc{
+    width:104px;height:104px;border-radius:50%;
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,0.16), transparent 55%),
+      var(--surface-alt);
+    position:relative;
+    flex-shrink:0;
+  }
+  .disc::after{
+    content:'';
+    position:absolute; inset:0; margin:auto;
+    width:20px;height:20px;border-radius:50%;
+    background:var(--accent);
+  }
+  .disc.spinning{ animation:spin 7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce){ .disc.spinning{ animation:none; } }
+
+  .track-title{ font-weight:700; font-size:18px; text-wrap:balance; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .track-sub{ font-size:13px; color:var(--ink-soft); }
+  .track-sub .chip-inline{ color:var(--accent); font-weight:600; }
+
+  .progress-row{ width:100%; display:flex; align-items:center; gap:8px; margin-top:4px; }
+  .time-label{ font-size:11px; color:var(--ink-soft); width:32px; flex-shrink:0; }
+  .time-label.right{ text-align:right; }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; flex:1; height:4px; border-radius:2px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val,0%), var(--line) var(--val,0%), var(--line) 100%);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px;height:14px;border-radius:50%; background:var(--accent); border:2px solid var(--surface); box-shadow:0 1px 3px rgba(0,0,0,0.3); cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{ width:14px;height:14px;border-radius:50%; background:var(--accent); border:2px solid var(--surface); cursor:pointer; }
+
+  .transport{ display:flex; align-items:center; justify-content:center; gap:26px; margin-top:8px; }
+  .xport-btn{ background:none; border:none; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:6px; }
+  .xport-btn.play-main{
+    width:54px;height:54px;border-radius:50%; background:var(--accent); color:var(--accent-ink);
+  }
+  .icon-play{ width:0;height:0; border-style:solid; border-width:8px 0 8px 14px; border-color:transparent transparent transparent currentColor; margin-left:3px; }
+  .icon-pause{ position:relative; width:14px;height:16px; }
+  .icon-pause::before,.icon-pause::after{ content:''; position:absolute; top:0; width:4px;height:16px; background:currentColor; border-radius:1px; }
+  .icon-pause::before{ left:1px; } .icon-pause::after{ left:9px; }
+  .icon-skip{ display:inline-flex; align-items:center; gap:2px; }
+  .icon-skip.next .tri{ width:0;height:0; border-style:solid; border-width:7px 0 7px 11px; border-color:transparent transparent transparent currentColor; }
+  .icon-skip.next .bar{ width:3px;height:15px; background:currentColor; border-radius:1px; }
+  .icon-skip.prev .tri{ width:0;height:0; border-style:solid; border-width:7px 11px 7px 0; border-color:transparent currentColor transparent transparent; }
+  .icon-skip.prev .bar{ width:3px;height:15px; background:currentColor; border-radius:1px; }
+
+  .mode-row{ display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; flex-wrap:wrap; }
+  .pill-toggle{
+    font-size:12px; padding:6px 10px; border-radius:8px; border:none; background:none;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .pill-toggle.active{ background:var(--surface-alt); color:var(--accent); font-weight:600; }
+
+  .volume-row{ display:flex; align-items:center; gap:10px; width:100%; margin-top:10px; padding:0 4px; }
+  .volume-row svg{ flex-shrink:0; color:var(--ink-soft); }
+
+  /* ---------- playlists chips ---------- */
+  .section-label{ font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-soft); margin:22px 2px 10px; font-weight:600; }
+  .chip-row{ display:flex; gap:20px; overflow-x:auto; padding-bottom:10px; -webkit-overflow-scrolling:touch; border-bottom:1px solid var(--line); }
+  .chip-row::-webkit-scrollbar{ height:0; }
+  .chip{
+    flex-shrink:0; padding:2px 0 10px; border:none; border-bottom:2px solid transparent; background:none;
+    font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .chip.active{ color:var(--ink); border-bottom-color:var(--accent); }
+  .chip.manage-chip{ color:var(--ink-soft); font-weight:500; }
+
+  /* ---------- track list ---------- */
+  .track-list{ margin-top:4px; }
+  .track-row{ display:flex; align-items:center; gap:10px; padding:13px 2px; border-bottom:1px solid var(--line); }
+  .track-row:last-child{ border-bottom:none; }
+  .track-name{ flex:1; min-width:0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+  .track-row.playing .track-name{ color:var(--accent); font-weight:700; }
+  .track-actions{ display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  .mini-btn{ width:26px;height:26px; border:none; background:none; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; border-radius:6px; }
+  .mini-btn:active{ background:var(--surface-alt); }
+  .mini-btn.danger{ color:var(--warn); }
+  .mini-btn.danger.armed{ background:var(--warn); color:#fff; font-size:10px; font-weight:700; width:auto; padding:0 8px; }
+  .empty-state{ padding:28px 8px; text-align:center; color:var(--ink-soft); font-size:13px; line-height:1.6; }
+  .add-row{ display:flex; align-items:center; justify-content:center; gap:6px; padding:14px 2px 6px; color:var(--accent); font-weight:600; font-size:13px; cursor:pointer; }
+  .add-row:active{ opacity:.6; }
+
+  .text-btn{ background:none; border:none; color:var(--accent); font-weight:600; font-size:13px; cursor:pointer; padding:12px 2px; }
+
+  /* ---------- sheets / overlay ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(30,24,14,0.35); display:flex; align-items:flex-end; z-index:20; }
+  .sheet{
+    background:var(--bg); width:100%; max-width:560px; margin:0 auto; border-radius:20px 20px 0 0;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px)); max-height:82vh; overflow-y:auto;
+  }
+  .sheet-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .sheet-title{ font-weight:700; font-size:17px; }
+  .field-label{ font-size:12px; color:var(--ink-soft); margin:16px 2px 6px; font-weight:600; }
+  .text-input{ width:100%; font-size:14px; padding:11px 12px; border:none; border-radius:10px; background:var(--surface-alt); color:var(--ink); }
+  .manage-row{ display:flex; align-items:center; gap:8px; background:var(--surface-alt); border-radius:10px; padding:9px 10px; margin-top:8px; }
+  .manage-row input{ flex:1; border:none; background:none; color:var(--ink); font-size:14px; }
+  .manage-row input:focus{ outline:none; }
+  .note{ font-size:12px; color:var(--ink-soft); line-height:1.6; margin-top:16px; }
+  .danger-btn{ margin-top:20px; width:100%; padding:12px; border-radius:10px; border:1px solid var(--warn); color:var(--warn); background:none; font-weight:600; font-size:13px; cursor:pointer; }
+  .danger-btn.armed{ background:var(--warn); color:#fff; }
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
+    max-width:calc(100% - 40px); background:var(--ink); color:var(--bg); font-size:13px; line-height:1.5;
+    padding:11px 16px; border-radius:12px; text-align:center; z-index:30; box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  }
+
+  [hidden]{ display:none !important; }
+</style>
+
+<div id="app">
+  <header>
+    <div class="shop-block">
+      <span class="shop-name" id="shopNameEl">ร้านของฉัน</span>
+      <div class="status-line">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">ไม่ได้เล่น</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="clock mono" id="clockEl">--:--</span>
+      <button class="icon-btn" id="settingsBtn" aria-label="ตั้งค่า">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="now-playing">
+      <div class="disc" id="discEl"></div>
+      <div class="track-title" id="trackTitleEl">ยังไม่ได้เลือกเพลง</div>
+      <div class="track-sub" id="trackSubEl">แตะเพลย์ลิสต์ด้านล่างเพื่อเริ่มเล่น</div>
+
+      <div class="progress-row">
+        <span class="time-label mono" id="curTimeEl">0:00</span>
+        <input type="range" id="progressRange" min="0" max="100" value="0" step="0.1">
+        <span class="time-label mono right" id="durTimeEl">0:00</span>
+      </div>
+
+      <div class="transport">
+        <button class="xport-btn" id="prevBtn" aria-label="เพลงก่อนหน้า"><span class="icon-skip prev"><span class="bar"></span><span class="tri"></span></span></button>
+        <button class="xport-btn play-main" id="playBtn" aria-label="เล่น/หยุด"><span id="playIcon" class="icon-play"></span></button>
+        <button class="xport-btn" id="nextBtn" aria-label="เพลงถัดไป"><span class="icon-skip next"><span class="tri"></span><span class="bar"></span></span></button>
+      </div>
+
+      <div class="mode-row">
+        <button class="pill-toggle" id="shuffleBtn">สุ่มเพลง</button>
+        <button class="pill-toggle" id="repeatBtn">วนซ้ำ: ปิด</button>
+      </div>
+
+      <div class="volume-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>
+        <input type="range" id="volumeRange" min="0" max="100" value="90">
+      </div>
+    </div>
+
+    <div class="section-label">เพลย์ลิสต์เทศกาล</div>
+    <div class="chip-row" id="chipRow"></div>
+
+    <div class="track-list" id="trackListEl"></div>
+  </main>
+
+  <audio id="audioEl" preload="metadata"></audio>
+  <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.wma,.aiff,.caf" multiple hidden>
+  <div id="toastEl" class="toast" hidden></div>
+
+  <!-- Settings sheet -->
+  <div class="overlay" id="settingsOverlay" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
+        <span class="sheet-title">ตั้งค่า</span>
+        <button class="icon-btn" id="closeSettingsBtn">✕</button>
+      </div>
+      <div class="field-label">ชื่อร้าน</div>
+      <input class="text-input" id="shopNameInput" maxlength="40">
+
+      <div class="field-label">จัดการเพลย์ลิสต์เทศกาล</div>
+      <div id="manageListEl"></div>
+      <button class="text-btn" id="addPlaylistBtn">+ เทศกาลใหม่</button>
+
+      <div class="field-label">รหัสผ่านคลังเพลง</div>
+      <div class="manage-row">
+        <input type="text" id="changePassInput" placeholder="ตั้งรหัสผ่านใหม่ (อย่างน้อย 4 ตัว)" maxlength="60">
+        <button class="mini-btn" id="changePassBtn" style="width:auto;padding:0 10px;color:var(--accent);font-weight:600;">เปลี่ยน</button>
+      </div>
+
+      <p class="note">เพลงและเพลย์ลิสต์ทั้งหมดเก็บไว้บนคลัง ใช้รหัสผ่านเดียวกันเปิดจากเครื่องไหนก็เห็นเพลย์ลิสต์และเพลงเดียวกัน — เก็บรหัสผ่านนี้ไว้ให้ดี เพราะเป็นกุญแจเข้าคลังเพลงของร้าน</p>
+
+      <button class="danger-btn" id="resetBtn">ล้างเพลง/เพลย์ลิสต์ทั้งหมด</button>
+      <p class="note">การล้างข้อมูลจะลบเพลงและเพลย์ลิสต์บนคลังทั้งหมด ส่งผลกับทุกเครื่องที่ใช้รหัสผ่านนี้</p>
+    </div>
+  </div>
+
+  <!-- Passphrase gate -->
+  <div class="overlay" id="passOverlay" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
+        <span class="sheet-title">รหัสผ่านคลังเพลง</span>
+      </div>
+      <p class="note">ใส่รหัสผ่านคลังเพลงของร้าน (ใช้เครื่องไหนก็ได้ ขอแค่รหัสผ่านตรงกัน) ถ้ายังไม่เคยตั้ง ให้พิมพ์รหัสผ่านที่ต้องการแล้วกด "เข้าใช้งาน" ได้เลย ระบบจะจำไว้ในเครื่องนี้ให้อัตโนมัติ</p>
+      <input class="text-input" id="passInput" type="password" placeholder="รหัสผ่าน (อย่างน้อย 4 ตัวอักษร)" autocomplete="off">
+      <button class="danger-btn" id="passSubmitBtn" style="border-color:var(--accent);color:var(--accent-ink);background:var(--accent);margin-top:14px;">เข้าใช้งาน</button>
+      <p class="note" id="passErrorEl" style="color:var(--warn);"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- cloud API (Supabase Edge Function) ----------------
+  const API_BASE = 'https://bhttifhinwbivrozzvor.supabase.co/functions/v1/music-api';
+  let passphrase = '';
+  try{ passphrase = localStorage.getItem('rr_passphrase') || ''; }catch(e){ passphrase = ''; }
+
+  async function apiCall(action, opts){
+    opts = opts || {};
+    const method = opts.method || 'GET';
+    const query = opts.query || {};
+    const params = new URLSearchParams(Object.assign({action}, query));
+    const url = API_BASE + '?' + params.toString();
+    const fetchOpts = { method };
+    if(opts.isForm){
+      fetchOpts.body = opts.body;
+    } else if(opts.body){
+      fetchOpts.headers = {'Content-Type':'application/json'};
+      fetchOpts.body = JSON.stringify(opts.body);
+    }
+    let res;
+    try{
+      res = await fetch(url, fetchOpts);
+    }catch(networkErr){
+      const e = new Error('เชื่อมต่อคลังเพลงไม่ได้ ตรวจสอบอินเทอร์เน็ต'); e.status = 0; throw e;
+    }
+    let data = {};
+    try{ data = await res.json(); }catch(_){ /* ignore */ }
+    if(!res.ok){
+      const e = new Error(data.error || ('เกิดข้อผิดพลาด ('+res.status+')')); e.status = res.status; throw e;
+    }
+    return data;
+  }
+  async function apiBootstrap(pass){ const d = await apiCall('bootstrap', {query:{passphrase:pass}}); return d.state; }
+  async function apiSaveState(){ await apiCall('save-state', {method:'POST', body:{passphrase, state}}); }
+  async function apiUpload(trackId, file){
+    const fd = new FormData();
+    fd.append('passphrase', passphrase);
+    fd.append('trackId', trackId);
+    fd.append('file', file);
+    return await apiCall('upload', {method:'POST', isForm:true, body:fd});
+  }
+  async function apiPlayUrl(trackId){ const d = await apiCall('play', {query:{passphrase, trackId}}); return d.url; }
+  async function apiDeleteTrack(trackId){ await apiCall('delete-track', {method:'POST', body:{passphrase, trackId}}); }
+  async function apiChangePassphrase(newPass){
+    await apiCall('change-passphrase', {method:'POST', body:{passphrase, newPassphrase:newPass}});
+    passphrase = newPass;
+    try{ localStorage.setItem('rr_passphrase', passphrase); }catch(e){}
+  }
+
+  let state;
+  function defaultState(){
+    const p1='pl_general', p2='pl_songkran', p3='pl_loikrathong', p4='pl_christmas', p5='pl_newyear',
+          p6='pl_valentine', p7='pl_halloween', p8='pl_mothersday';
+    return {
+      shopName:'ร้านของฉัน',
+      playlists:[
+        {id:p1, name:'เพลงทั่วไป'},
+        {id:p2, name:'สงกรานต์'},
+        {id:p3, name:'ลอยกระทง'},
+        {id:p4, name:'คริสต์มาส'},
+        {id:p5, name:'ปีใหม่'},
+        {id:p6, name:'วาเลนไทน์'},
+        {id:p7, name:'ฮาโลวีน'},
+        {id:p8, name:'วันแม่'}
+      ],
+      tracks:[],
+      settings:{ shuffle:false, repeat:'off', volume:0.9, activePlaylistId:p1 }
+    };
+  }
+  async function saveState(){
+    try{
+      await apiSaveState();
+    }catch(err){
+      console.error('save-state failed', err);
+      if(err.status===401){
+        try{ localStorage.removeItem('rr_passphrase'); }catch(e){}
+        showToast('รหัสผ่านคลังเพลงมีการเปลี่ยนแปลง กรุณาเข้าสู่ระบบใหม่', 5000);
+        showPassPrompt();
+      } else {
+        showToast('บันทึกขึ้นคลังไม่สำเร็จ ('+(err.message||'')+')', 5000);
+      }
+    }
+  }
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function formatTime(s){
+    if(!isFinite(s) || s<0) return '0:00';
+    s = Math.floor(s);
+    const m = Math.floor(s/60), sec = s%60;
+    return m+':'+String(sec).padStart(2,'0');
+  }
+  function shuffleArray(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // ---------------- elements ----------------
+  const shopNameEl = document.getElementById('shopNameEl');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const clockEl = document.getElementById('clockEl');
+  const discEl = document.getElementById('discEl');
+  const trackTitleEl = document.getElementById('trackTitleEl');
+  const trackSubEl = document.getElementById('trackSubEl');
+  const progressRange = document.getElementById('progressRange');
+  const curTimeEl = document.getElementById('curTimeEl');
+  const durTimeEl = document.getElementById('durTimeEl');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const repeatBtn = document.getElementById('repeatBtn');
+  const volumeRange = document.getElementById('volumeRange');
+  const chipRow = document.getElementById('chipRow');
+  const trackListEl = document.getElementById('trackListEl');
+  const audioEl = document.getElementById('audioEl');
+  const fileInput = document.getElementById('fileInput');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const shopNameInput = document.getElementById('shopNameInput');
+  const manageListEl = document.getElementById('manageListEl');
+  const addPlaylistBtn = document.getElementById('addPlaylistBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const toastEl = document.getElementById('toastEl');
+  const passOverlay = document.getElementById('passOverlay');
+  const passInput = document.getElementById('passInput');
+  const passSubmitBtn = document.getElementById('passSubmitBtn');
+  const passErrorEl = document.getElementById('passErrorEl');
+
+  let toastTimer = null;
+  function showToast(msg, ms){
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>{ toastEl.hidden = true; }, ms || 3000);
+  }
+
+  let currentTrackId = null;
+  let shuffledQueue = [];
+  let currentAudioUrl = null;
+  let pendingAddPlaylistId = null;
+  let wakeLock = null;
+  let armed = null; // {type, id, timer}
+
+  function isArmed(type,id){ return armed && armed.type===type && armed.id===id; }
+  function arm(type,id, rerenderFn){
+    if(armed && armed.timer) clearTimeout(armed.timer);
+    armed = { type, id, timer: setTimeout(()=>{ armed=null; rerenderFn(); }, 3000) };
+    rerenderFn();
+  }
+  function disarm(){ if(armed && armed.timer) clearTimeout(armed.timer); armed=null; }
+
+  // ---------------- data helpers ----------------
+  function getTracksFor(playlistId){ return state.tracks.filter(t=>t.playlistId===playlistId); }
+  function buildQueue(playlistId){
+    let list = getTracksFor(playlistId).map(t=>t.id);
+    if(state.settings.shuffle) list = shuffleArray(list.slice());
+    return list;
+  }
+  function rebuildQueuePreserveCurrent(){
+    let list = getTracksFor(state.settings.activePlaylistId).map(t=>t.id);
+    if(state.settings.shuffle){
+      list = list.filter(id=>id!==currentTrackId);
+      list = shuffleArray(list);
+      if(currentTrackId) list.unshift(currentTrackId);
+    }
+    shuffledQueue = list;
+  }
+
+  // ---------------- playback ----------------
+  async function playTrack(trackId){
+    const track = state.tracks.find(t=>t.id===trackId);
+    if(!track) return;
+    let url;
+    try{
+      url = await apiPlayUrl(trackId);
+    }catch(err){
+      console.error('play failed', err);
+      if(err.status===401){
+        try{ localStorage.removeItem('rr_passphrase'); }catch(e){}
+        showToast('รหัสผ่านคลังเพลงมีการเปลี่ยนแปลง กรุณาเข้าสู่ระบบใหม่', 5000);
+        showPassPrompt();
+      } else {
+        showToast('เล่นเพลง "'+track.name+'" ไม่สำเร็จ ('+(err.message||'')+')', 5000);
+      }
+      return;
+    }
+    currentAudioUrl = url;
+    audioEl.src = url;
+    currentTrackId = trackId;
+    try{ await audioEl.play(); }catch(e){ /* needs user gesture */ }
+    updateMediaSession(track);
+    renderNowPlaying();
+    renderTrackList();
+  }
+
+  async function playPlaylist(playlistId){
+    if(!playlistId) return;
+    state.settings.activePlaylistId = playlistId;
+    shuffledQueue = buildQueue(playlistId);
+    await saveState();
+    renderChips();
+    if(shuffledQueue.length===0){
+      audioEl.pause(); audioEl.removeAttribute('src'); currentTrackId=null;
+      renderNowPlaying(); renderTrackList();
+      return;
+    }
+    await playTrack(shuffledQueue[0]);
+  }
+
+  async function playNext(){
+    const q = shuffledQueue;
+    if(q.length===0) return;
+    if(state.settings.repeat==='one'){ await playTrack(currentTrackId); return; }
+    let idx = q.indexOf(currentTrackId);
+    idx = (idx+1) % q.length;
+    if(idx===0 && state.settings.repeat==='off' && q.indexOf(currentTrackId)===q.length-1){
+      audioEl.pause();
+      return;
+    }
+    await playTrack(q[idx]);
+  }
+  async function playPrev(){
+    const q = shuffledQueue;
+    if(q.length===0) return;
+    let idx = q.indexOf(currentTrackId);
+    idx = (idx-1+q.length) % q.length;
+    await playTrack(q[idx]);
+  }
+  async function togglePlay(){
+    if(!currentTrackId){ await playPlaylist(state.settings.activePlaylistId); return; }
+    if(audioEl.paused){ try{ await audioEl.play(); }catch(e){} } else { audioEl.pause(); }
+  }
+
+  audioEl.addEventListener('ended', async ()=>{ await playNext(); });
+  audioEl.addEventListener('play', onPlayStateChange);
+  audioEl.addEventListener('pause', onPlayStateChange);
+  function onPlayStateChange(){ renderNowPlaying(); handleWakeLock(); }
+
+  audioEl.addEventListener('timeupdate', ()=>{
+    const dur = audioEl.duration || 0;
+    const cur = audioEl.currentTime || 0;
+    const pct = dur ? (cur/dur*100) : 0;
+    progressRange.value = pct;
+    progressRange.style.setProperty('--val', pct+'%');
+    curTimeEl.textContent = formatTime(cur);
+    durTimeEl.textContent = formatTime(dur);
+  });
+  progressRange.addEventListener('input', ()=>{
+    if(audioEl.duration){ audioEl.currentTime = (progressRange.value/100)*audioEl.duration; }
+  });
+
+  // ---------------- wake lock ----------------
+  async function handleWakeLock(){
+    try{
+      if(!audioEl.paused && document.visibilityState==='visible'){
+        if('wakeLock' in navigator && !wakeLock){
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', ()=>{ wakeLock=null; });
+        }
+      } else if(audioEl.paused && wakeLock){
+        try{ await wakeLock.release(); }catch(e){}
+        wakeLock = null;
+      }
+    }catch(e){ /* ignore - not critical */ }
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible') handleWakeLock();
+  });
+
+  // ---------------- media session ----------------
+  function updateMediaSession(track){
+    if('mediaSession' in navigator){
+      const pl = state.playlists.find(p=>p.id===track.playlistId);
+      try{
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.name,
+          artist: pl ? pl.name : '',
+          album: state.shopName || ''
+        });
+      }catch(e){}
+      navigator.mediaSession.setActionHandler('play', ()=>togglePlay());
+      navigator.mediaSession.setActionHandler('pause', ()=>togglePlay());
+      navigator.mediaSession.setActionHandler('previoustrack', ()=>playPrev());
+      navigator.mediaSession.setActionHandler('nexttrack', ()=>playNext());
+    }
+  }
+
+  // ---------------- add / delete tracks ----------------
+  function openAddFiles(playlistId){ pendingAddPlaylistId = playlistId; fileInput.click(); }
+  fileInput.addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files || []);
+    const target = pendingAddPlaylistId || state.settings.activePlaylistId;
+    fileInput.value = '';
+    if(!files.length){ return; }
+    if(!target){ showToast('ยังไม่ได้เลือกเพลย์ลิสต์ปลายทาง'); return; }
+    showToast('กำลังอัปโหลดเพลงขึ้นคลัง…', 60000);
+    let added = 0;
+    let failMsg = '';
+    for(const f of files){
+      try{
+        const id = 'trk_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+        await apiUpload(id, f);
+        state.tracks.push({ id, name: f.name.replace(/\.[^.]+$/, ''), playlistId: target });
+        await apiSaveState();
+        added++;
+      }catch(err){
+        console.error('add track failed', err);
+        if(err.status===401){
+          try{ localStorage.removeItem('rr_passphrase'); }catch(e){}
+          failMsg = 'รหัสผ่านคลังเพลงมีการเปลี่ยนแปลง กรุณาเข้าสู่ระบบใหม่';
+          break;
+        }
+        failMsg = 'อัปโหลดไฟล์ "'+f.name+'" ไม่สำเร็จ ('+(err.message||'unknown error')+')';
+        break;
+      }
+    }
+    renderTrackList(); renderChips(); renderManageSheet();
+    if(added>0 && !failMsg){ showToast('เพิ่มเพลงขึ้นคลังแล้ว '+added+' เพลง'); }
+    else if(added>0 && failMsg){ showToast('เพิ่มได้ '+added+' เพลง แล้วหยุด — '+failMsg, 7000); }
+    else { showToast(failMsg || 'เพิ่มเพลงไม่สำเร็จ ลองใหม่อีกครั้ง', 6000); }
+    if(/รหัสผ่านคลังเพลงมีการเปลี่ยนแปลง/.test(failMsg)) showPassPrompt();
+  });
+
+  async function deleteTrack(id){
+    state.tracks = state.tracks.filter(t=>t.id!==id);
+    if(currentTrackId===id){
+      audioEl.pause(); audioEl.removeAttribute('src'); currentTrackId=null;
+      shuffledQueue = shuffledQueue.filter(x=>x!==id);
+    }
+    await saveState();
+    apiDeleteTrack(id).catch(err=>console.error('cloud delete failed', err));
+    renderTrackList(); renderNowPlaying(); renderChips();
+  }
+
+  function moveTrack(id, dir){
+    const track = state.tracks.find(t=>t.id===id);
+    if(!track) return;
+    const sameList = state.tracks.filter(t=>t.playlistId===track.playlistId);
+    const idx = sameList.findIndex(t=>t.id===id);
+    const swapIdx = idx+dir;
+    if(swapIdx<0 || swapIdx>=sameList.length) return;
+    const a = state.tracks.indexOf(sameList[idx]);
+    const b = state.tracks.indexOf(sameList[swapIdx]);
+    const tmp = state.tracks[a]; state.tracks[a]=state.tracks[b]; state.tracks[b]=tmp;
+    saveState().then(()=>{
+      renderTrackList();
+      if(state.settings.activePlaylistId===track.playlistId && !state.settings.shuffle){
+        shuffledQueue = buildQueue(track.playlistId);
+      }
+    });
+  }
+
+  // ---------------- playlists ----------------
+  async function addPlaylist(){
+    const id = 'pl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    state.playlists.push({ id, name:'เทศกาลใหม่' });
+    await saveState();
+    renderChips(); renderManageSheet();
+  }
+  async function renamePlaylist(id, name){
+    const p = state.playlists.find(p=>p.id===id);
+    if(p){ p.name = name || p.name; await saveState(); renderChips(); renderNowPlaying(); }
+  }
+  async function deletePlaylist(id){
+    const tracksToRemove = state.tracks.filter(t=>t.playlistId===id);
+    state.tracks = state.tracks.filter(t=>t.playlistId!==id);
+    state.playlists = state.playlists.filter(p=>p.id!==id);
+    if(state.settings.activePlaylistId===id){
+      state.settings.activePlaylistId = state.playlists[0] ? state.playlists[0].id : null;
+      audioEl.pause(); audioEl.removeAttribute('src'); currentTrackId=null; shuffledQueue=[];
+    }
+    await saveState();
+    tracksToRemove.forEach(t=> apiDeleteTrack(t.id).catch(err=>console.error('cloud delete failed', err)));
+    renderAll();
+  }
+
+  // ================= RENDER =================
+  function renderClock(){
+    const now = new Date();
+    clockEl.textContent = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  }
+
+  function renderHeader(){
+    shopNameEl.textContent = state.shopName || 'ร้านของฉัน';
+    const playing = currentTrackId && !audioEl.paused;
+    statusDot.classList.toggle('on', !!playing);
+    statusText.textContent = playing ? 'กำลังเล่นเพลง' : (currentTrackId ? 'หยุดชั่วคราว' : 'ไม่ได้เล่น');
+  }
+
+  function renderNowPlaying(){
+    renderHeader();
+    const track = state.tracks.find(t=>t.id===currentTrackId);
+    const playlist = state.playlists.find(p=>p.id===state.settings.activePlaylistId);
+    if(track){
+      trackTitleEl.textContent = track.name;
+      trackSubEl.innerHTML = 'กำลังเล่นจาก <span class="chip-inline">'+esc(playlist?playlist.name:'')+'</span>';
+    } else {
+      trackTitleEl.textContent = 'ยังไม่ได้เลือกเพลง';
+      trackSubEl.textContent = 'แตะเพลย์ลิสต์ด้านล่างเพื่อเริ่มเล่น';
+    }
+    const playing = !audioEl.paused && currentTrackId;
+    discEl.classList.toggle('spinning', !!playing);
+    playIcon.className = playing ? 'icon-pause' : 'icon-play';
+    shuffleBtn.classList.toggle('active', state.settings.shuffle);
+    const repeatLabel = { off:'วนซ้ำ: ปิด', all:'วนซ้ำ: ทั้งหมด', one:'วนซ้ำ: เพลงเดียว' }[state.settings.repeat];
+    repeatBtn.textContent = repeatLabel;
+    repeatBtn.classList.toggle('active', state.settings.repeat!=='off');
+  }
+
+  function renderChips(){
+    chipRow.innerHTML = state.playlists.map(p=>{
+      const active = p.id===state.settings.activePlaylistId;
+      return '<button class="chip'+(active?' active':'')+'" data-pl="'+p.id+'">'+esc(p.name)+'</button>';
+    }).join('') + '<button class="chip manage-chip" id="manageChipBtn">จัดการ</button>';
+
+    chipRow.querySelectorAll('.chip[data-pl]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        playPlaylist(btn.dataset.pl);
+      });
+    });
+    const manageChipBtn = document.getElementById('manageChipBtn');
+    if(manageChipBtn) manageChipBtn.addEventListener('click', openSettings);
+  }
+
+  function renderTrackList(){
+    const playlist = state.playlists.find(p=>p.id===state.settings.activePlaylistId);
+    const tracks = playlist ? getTracksFor(playlist.id) : [];
+    let html = '';
+    if(!playlist){
+      html = '<div class="empty-state">ยังไม่มีเพลย์ลิสต์ — ไปที่ "จัดการ" เพื่อสร้างเพลย์ลิสต์แรก</div>';
+    } else if(tracks.length===0){
+      html = '<div class="empty-state">เพลย์ลิสต์ "'+esc(playlist.name)+'" ยังไม่มีเพลง<br>แตะ + เพิ่มเพลง ด้านล่างเพื่อเลือกไฟล์เสียงจากแอป "ไฟล์" ในเครื่อง<br><span style="opacity:.75">(ถ้าเพลงอยู่ใน Apple Music/เพลย์ลิสต์เพลง ต้องดาวน์โหลด/บันทึกเป็นไฟล์ในแอป "ไฟล์" ก่อน จึงจะเลือกได้)</span></div>';
+    } else {
+      html = tracks.map((t,i)=>{
+        const playing = t.id===currentTrackId;
+        const armedDel = isArmed('track', t.id);
+        return '<div class="track-row'+(playing?' playing':'')+'">'
+          + '<span class="track-name" data-play="'+t.id+'">'+esc(t.name)+'</span>'
+          + '<div class="track-actions">'
+          + '<button class="mini-btn" data-up="'+t.id+'" aria-label="เลื่อนขึ้น">▲</button>'
+          + '<button class="mini-btn" data-down="'+t.id+'" aria-label="เลื่อนลง">▼</button>'
+          + '<button class="mini-btn danger'+(armedDel?' armed':'')+'" data-del="'+t.id+'">'+(armedDel?'ลบ?':'✕')+'</button>'
+          + '</div></div>';
+      }).join('');
+    }
+    if(playlist){
+      html += '<div class="add-row" id="addTrackRow">+ เพิ่มเพลง</div>';
+    }
+    trackListEl.innerHTML = html;
+
+    trackListEl.querySelectorAll('[data-play]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.dataset.play;
+        if(!state.settings.shuffle){
+          // reset queue to normal order starting here, keep normal ordering
+          shuffledQueue = buildQueue(state.settings.activePlaylistId);
+        }
+        playTrack(id);
+      });
+    });
+    trackListEl.querySelectorAll('[data-up]').forEach(el=> el.addEventListener('click', ()=>moveTrack(el.dataset.up,-1)));
+    trackListEl.querySelectorAll('[data-down]').forEach(el=> el.addEventListener('click', ()=>moveTrack(el.dataset.down,1)));
+    trackListEl.querySelectorAll('[data-del]').forEach(el=> el.addEventListener('click', ()=>{
+      const id = el.dataset.del;
+      if(isArmed('track', id)){ disarm(); deleteTrack(id); }
+      else { arm('track', id, renderTrackList); }
+    }));
+    const addTrackRow = document.getElementById('addTrackRow');
+    if(addTrackRow) addTrackRow.addEventListener('click', ()=> openAddFiles(state.settings.activePlaylistId));
+  }
+
+  function renderManageSheet(){
+    if(!state.playlists.length){
+      manageListEl.innerHTML = '<div class="empty-state">ยังไม่มีเพลย์ลิสต์</div>';
+      return;
+    }
+    manageListEl.innerHTML = state.playlists.map(p=>{
+      const armedDel = isArmed('playlist', p.id);
+      const trackCount = getTracksFor(p.id).length;
+      return '<div class="manage-row">'
+        + '<input type="text" value="'+esc(p.name)+'" data-rename="'+p.id+'" maxlength="30">'
+        + '<span style="font-size:11px;color:var(--ink-soft);flex-shrink:0;">'+trackCount+' เพลง</span>'
+        + '<button class="mini-btn danger'+(armedDel?' armed':'')+'" data-del-pl="'+p.id+'">'+(armedDel?'ลบ?':'✕')+'</button>'
+        + '</div>';
+    }).join('');
+    manageListEl.querySelectorAll('[data-rename]').forEach(el=>{
+      el.addEventListener('change', ()=> renamePlaylist(el.dataset.rename, el.value.trim()));
+    });
+    manageListEl.querySelectorAll('[data-del-pl]').forEach(el=> el.addEventListener('click', ()=>{
+      const id = el.dataset.delPl;
+      if(isArmed('playlist', id)){ disarm(); deletePlaylist(id); }
+      else { arm('playlist', id, renderManageSheet); }
+    }));
+  }
+
+  function renderAll(){
+    renderClock();
+    renderHeader();
+    renderNowPlaying();
+    renderChips();
+    renderTrackList();
+    renderManageSheet();
+    shopNameInput.value = state.shopName || '';
+    volumeRange.value = Math.round((state.settings.volume ?? 0.9)*100);
+  }
+
+  // ---------------- controls ----------------
+  playBtn.addEventListener('click', togglePlay);
+  prevBtn.addEventListener('click', playPrev);
+  nextBtn.addEventListener('click', playNext);
+  shuffleBtn.addEventListener('click', async ()=>{
+    state.settings.shuffle = !state.settings.shuffle;
+    if(currentTrackId) rebuildQueuePreserveCurrent();
+    else if(state.settings.activePlaylistId) shuffledQueue = buildQueue(state.settings.activePlaylistId);
+    await saveState();
+    renderNowPlaying();
+  });
+  repeatBtn.addEventListener('click', async ()=>{
+    const order = ['off','all','one'];
+    const idx = order.indexOf(state.settings.repeat);
+    state.settings.repeat = order[(idx+1)%order.length];
+    await saveState();
+    renderNowPlaying();
+  });
+  volumeRange.addEventListener('input', ()=>{
+    const v = Number(volumeRange.value)/100;
+    audioEl.volume = v;
+  });
+  volumeRange.addEventListener('change', async ()=>{
+    state.settings.volume = Number(volumeRange.value)/100;
+    await saveState();
+  });
+
+  function openSettings(){
+    settingsOverlay.hidden = false;
+    renderManageSheet();
+    shopNameInput.value = state.shopName||'';
+  }
+  function closeSettings(){ settingsOverlay.hidden = true; }
+  settingsBtn.addEventListener('click', openSettings);
+  closeSettingsBtn.addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', (e)=>{ if(e.target===settingsOverlay) closeSettings(); });
+  shopNameInput.addEventListener('change', async ()=>{
+    state.shopName = shopNameInput.value.trim() || 'ร้านของฉัน';
+    await saveState();
+    renderHeader();
+  });
+  addPlaylistBtn.addEventListener('click', addPlaylist);
+  resetBtn.addEventListener('click', ()=>{
+    if(isArmed('reset','all')){
+      disarm();
+      (async ()=>{
+        const ids = state.tracks.map(t=>t.id);
+        state = defaultState();
+        await saveState();
+        ids.forEach(id=> apiDeleteTrack(id).catch(err=>console.error('cloud delete failed', err)));
+        audioEl.pause(); audioEl.removeAttribute('src'); currentTrackId=null; shuffledQueue=[];
+        renderAll();
+        closeSettings();
+      })();
+    } else {
+      arm('reset','all', ()=>{
+        resetBtn.textContent = isArmed('reset','all') ? 'แตะอีกครั้งเพื่อยืนยัน' : 'ล้างเพลง/เพลย์ลิสต์ทั้งหมด';
+        resetBtn.classList.toggle('armed', isArmed('reset','all'));
+      });
+    }
+  });
+
+  const changePassInput = document.getElementById('changePassInput');
+  const changePassBtn = document.getElementById('changePassBtn');
+  changePassBtn.addEventListener('click', async ()=>{
+    const val = changePassInput.value.trim();
+    if(val.length<4){ showToast('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร'); return; }
+    changePassBtn.disabled = true;
+    try{
+      await apiChangePassphrase(val);
+      changePassInput.value = '';
+      showToast('เปลี่ยนรหัสผ่านคลังเพลงแล้ว');
+    }catch(err){
+      showToast('เปลี่ยนรหัสผ่านไม่สำเร็จ ('+(err.message||'')+')', 5000);
+    } finally {
+      changePassBtn.disabled = false;
+    }
+  });
+
+  // ---------------- passphrase gate ----------------
+  let clockTimer = null;
+  function showPassPrompt(prefill){
+    passOverlay.hidden = false;
+    passErrorEl.textContent = '';
+    passInput.value = prefill || '';
+    setTimeout(()=>{ try{ passInput.focus(); }catch(e){} }, 50);
+  }
+  function afterAuthSuccess(){
+    if(!state.settings) state.settings = defaultState().settings;
+    if(state.settings.repeat===undefined) state.settings.repeat='off';
+    audioEl.volume = state.settings.volume ?? 0.9;
+    if(!state.settings.activePlaylistId && state.playlists[0]) state.settings.activePlaylistId = state.playlists[0].id;
+    passOverlay.hidden = true;
+    renderAll();
+    if(!clockTimer) clockTimer = setInterval(renderClock, 1000);
+  }
+  async function submitPassphrase(){
+    const val = passInput.value.trim();
+    if(val.length<4){ passErrorEl.textContent = 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร'; return; }
+    passSubmitBtn.disabled = true;
+    passSubmitBtn.textContent = 'กำลังเข้าสู่ระบบ…';
+    try{
+      const s = await apiBootstrap(val);
+      passphrase = val;
+      try{ localStorage.setItem('rr_passphrase', passphrase); }catch(e){}
+      state = s;
+      afterAuthSuccess();
+    }catch(err){
+      console.error('bootstrap failed', err);
+      passErrorEl.textContent = err.message || 'เข้าใช้งานไม่สำเร็จ ลองใหม่อีกครั้ง';
+    } finally {
+      passSubmitBtn.disabled = false;
+      passSubmitBtn.textContent = 'เข้าใช้งาน';
+    }
+  }
+  passSubmitBtn.addEventListener('click', submitPassphrase);
+  passInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitPassphrase(); });
+
+  // ---------------- init ----------------
+  async function init(){
+    if(passphrase){
+      try{
+        state = await apiBootstrap(passphrase);
+        afterAuthSuccess();
+        return;
+      }catch(err){
+        console.warn('auto bootstrap failed', err);
+      }
+    }
+    showPassPrompt(passphrase);
+  }
+  init();
+})();
+</script>
